@@ -1,0 +1,62 @@
+;;; -*- mode: clojurec; -*-
+
+(ns imgui)
+
+(cpp/raw "#include <GLFW/glfw3.h>")
+(cpp/raw "#include <imgui.h>")
+(cpp/raw "#include <imgui_impl_glfw.h>")
+(cpp/raw "#include <imgui_impl_opengl2.h>")
+
+(defn glfw-init
+  []
+  (when-not (cpp/glfwInit) (println "Error initializing GLFW") (cpp/exit 0)))
+
+(defn create-window
+  [width height name]
+  (glfw-init)
+  (let [window
+          (cpp/box
+            (cpp/glfwCreateWindow width height name cpp/nullptr cpp/nullptr))]
+    (if (cpp/! (cpp/unbox cpp/GLFWwindow* window))
+      (do (println "Window creation failed") (cpp/exit 0))
+      window)))
+
+(defn- clear-viewport
+  [window]
+  (let [display_w (cpp/int 0)
+        display_h (cpp/int 0)]
+    (cpp/glfwGetFramebufferSize (cpp/unbox cpp/GLFWwindow* window)
+                                (cpp/& display_w)
+                                (cpp/& display_h))
+    (cpp/glViewport 0 0 display_w display_h)
+    (cpp/glClearColor 0.0 0.0 0.0 1.0)
+    (def GL_COLOR_BUFFER_BIT 0x00004000)
+    (cpp/glClear GL_COLOR_BUFFER_BIT)))
+
+(defn run-app
+  [window app]
+  ;; setup GLFW
+  (cpp/glfwMakeContextCurrent (cpp/unbox cpp/GLFWwindow* window))
+  (cpp/glfwSwapInterval (cpp/int 1))
+  ;; initialize imgui
+  (cpp/ImGui.CreateContext)
+  (cpp/ImGui.StyleColorsDark)
+  (cpp/ImGui_ImplGlfw_InitForOpenGL (cpp/unbox cpp/GLFWwindow* window) true)
+  (cpp/ImGui_ImplOpenGL2_Init)
+  ;; frame loop
+  (while (cpp/! (cpp/glfwWindowShouldClose (cpp/unbox cpp/GLFWwindow* window)))
+    ;; poll events
+    (cpp/glfwPollEvents)
+    ;; setup frame in imgui backend
+    (cpp/ImGui_ImplOpenGL2_NewFrame)
+    (cpp/ImGui_ImplGlfw_NewFrame)
+    (cpp/ImGui.NewFrame)
+    ;; call user code
+    (app)
+    ;; render the frame
+    (cpp/ImGui.Render)
+    (clear-viewport window)
+    (cpp/ImGui_ImplOpenGL2_RenderDrawData (cpp/ImGui.GetDrawData))
+    (cpp/glfwMakeContextCurrent (cpp/unbox cpp/GLFWwindow* window))
+    (cpp/glfwSwapBuffers (cpp/unbox cpp/GLFWwindow* window)))
+  (cpp/glfwTerminate))

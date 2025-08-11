@@ -1,0 +1,35 @@
+;;; -*- mode: clojurec; -*-
+
+(ns imgui-demo
+  (:require [imgui]))
+
+(cpp/raw "#include <imgui.h>")
+
+(def *counter (atom 0))
+(def *slider (atom 0.0))
+
+(defn app
+  []
+  ;; imgui window should fill the OS window
+  (cpp/ImGui.SetNextWindowPos (cpp/ImVec2. 0.0 0.0))
+  (cpp/ImGui.SetNextWindowSize (cpp/.-DisplaySize (cpp/ImGui.GetIO)))
+  ;; begin window
+  (cpp/ImGui.Begin "jank")
+
+  ;; demo: pushing a button increments an atom
+  (when (cpp/ImGui.Button "Increment")
+    (swap! *counter #(+ 1 %)))
+  (cpp/ImGui.Text (str "@*counter = " @*counter))
+
+  ;; demo: syncing an imgui slider with an atom
+  (let [slider (cpp/float @*slider)]
+    (cpp/ImGui.SliderFloat "##slider" (cpp/& slider) 0.0 1.0)
+    (reset! *slider slider))
+  (cpp/ImGui.Text (str "@*slider = " @*slider))
+
+  (cpp/ImGui.End))
+
+(defn -main
+  []
+  (let [window (imgui/create-window 400 300 "irtop")]
+    (imgui/run-app window #'app)))
