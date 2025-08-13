@@ -14,9 +14,7 @@
 (defn create-window
   [width height name]
   (glfw-init)
-  (let [window
-          (cpp/box
-            (cpp/glfwCreateWindow width height name cpp/nullptr cpp/nullptr))]
+  (let [window (cpp/box (cpp/glfwCreateWindow width height name cpp/nullptr cpp/nullptr))]
     (if (cpp/! (cpp/unbox cpp/GLFWwindow* window))
       (do (println "Window creation failed") (cpp/exit 0))
       window)))
@@ -33,7 +31,7 @@
     (def GL_COLOR_BUFFER_BIT 0x00004000)
     (cpp/glClear GL_COLOR_BUFFER_BIT)))
 
-(defn run-app
+(defn run-app!
   [window app]
   ;; setup GLFW
   (cpp/glfwMakeContextCurrent (cpp/unbox cpp/GLFWwindow* window))
