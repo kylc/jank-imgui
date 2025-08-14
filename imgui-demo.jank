@@ -12,57 +12,91 @@
          :eval-string ""
          :eval-result nil}))
 
+(defn trim-to-length
+  "Trim a string to length and insert a placeholder."
+  [s l]
+  (if (> (count s) l)
+    (str (subs s 0 l) "...")
+    s))
+
+;; Helper function to eval an expression and catch errors.
+(cpp/raw "namespace imgui_demo_native {
+::jank::runtime::object_ref safe_eval(const ::jank::runtime::object_ref expr) {
+  try {
+    return ::jank::runtime::__rt_ctx->eval(expr);
+  } catch(::jank::error_ref e) {
+    return ::jank::runtime::jank_nil;
+  }
+}
+}")
+
+(defn safe-eval
+  "Evaluate a string but return nil on failure."
+  [s]
+  (cpp/imgui_demo_native.safe_eval (read-string s)))
+
 (defn state-table
   []
   (cpp/ImGui.BeginTable "table" 2)
-  (doseq [[k v] (into [["KEY" "VALUE"]] @*state)]
+  (cpp/ImGui.TableSetupColumn "KEY")
+  (cpp/ImGui.TableSetupColumn "VALUE")
+  (cpp/ImGui.TableHeadersRow)
+  (doseq [[k v] @*state]
     (cpp/ImGui.TableNextRow)
     (cpp/ImGui.TableNextColumn)
     (cpp/ImGui.Text (str k))
     (cpp/ImGui.TableNextColumn)
-    (cpp/ImGui.Text (str v)))
+    (let [v-str (trim-to-length (pr-str v) 10)]
+      (cpp/ImGui.Text v-str)))
   (cpp/ImGui.EndTable))
 
 (defn repl
   []
-  (let [buffer-size 64
-        buffer      (cpp/cast cpp/std.string (:eval-string @*state))]
-    (cpp/.reserve buffer buffer-size)
+  (let [buffer (cpp/cast cpp/std.string (:eval-string @*state))]
+    (cpp/ImGui.SetNextItemWidth (cpp/.-x (cpp/ImGui.GetContentRegionAvail)))
     (cpp/ImGui.InputTextMultiline (cpp/.data (cpp/cast cpp/std.string "##eval")) (cpp/& buffer))
     (swap! *state assoc :eval-string buffer))
 
   (when (cpp/ImGui.Button "Eval")
-    (->> (eval (read-string (:eval-string @*state)))
-         (swap! *state assoc :eval-result))))
+    (->> (safe-eval (:eval-string @*state))
+         (swap! *state assoc :eval-result)))
+
+  (let [eval-result (:eval-result @*state)]
+    (cpp/ImGui.SameLine)
+    (cpp/ImGui.Text (str "=> " (pr-str eval-result))))
+
+  (cpp/ImGui.Dummy (cpp/ImVec2. 0.0 10.0)))
 
 (defn app
   []
   ;; imgui window should fill the OS window
   (cpp/ImGui.SetNextWindowPos (cpp/ImVec2. 0.0 0.0))
   (cpp/ImGui.SetNextWindowSize (cpp/.-DisplaySize (cpp/ImGui.GetIO)))
+
   ;; begin window
-  (cpp/ImGui.Begin "jank")
+  (when (cpp/ImGui.Begin "jank")
 
-  ;; demo: pushing a button increments an atom
-  (when (cpp/ImGui.Button "Increment")
-    (swap! *state update :counter inc))
+    ;; demo: pushing a button increments an atom
+    (when (cpp/ImGui.Button "Increment")
+      (swap! *state update :counter inc))
 
-  (cpp/ImGui.SameLine)
+    (cpp/ImGui.SameLine)
 
-  ;; demo: syncing an imgui slider with an atom
-  (let [value (cpp/float (:slider @*state))]
-    (cpp/ImGui.SliderFloat "##slider" (cpp/& value) 0.0 1.0)
-    (swap! *state assoc :slider value))
+    ;; demo: syncing an imgui slider with an atom
+    (let [value (cpp/float (:slider @*state))]
+      (cpp/ImGui.SetNextItemWidth (cpp/.-x (cpp/ImGui.GetContentRegionAvail)))
+      (cpp/ImGui.SliderFloat "##slider" (cpp/& value) 0.0 1.0)
+      (swap! *state assoc :slider value))
 
-  ;; demo: table showing state keys/values
-  (state-table)
+    ;; demo: repl
+    (repl)
 
-  ;; demo: repl
-  (repl)
+    ;; demo: table showing state keys/values
+    (state-table))
 
   (cpp/ImGui.End))
 
 (defn -main
   []
-  (let [window (imgui/create-window 400 300 "irtop")]
+  (let [window (imgui/create-window 400 300 "jank-imgui")]
     (imgui/run-app! window #'app)))
