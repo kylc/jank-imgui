@@ -389,11 +389,11 @@ namespace imgui::ui {
   [[push-style-var]] for options), :color (see [[push-style-color]]
   for options), etc."
   [attrs & body]
-  `(do
-     (doseq [[k# v#] (:style ~attrs)] (push-style-var k# v#))
-     (doseq [[k# v#] (:color ~attrs)] (push-style-color k# v#))
-     (when (:id ~attrs) (push-id (:id ~attrs)))
+  `(let [attrs# ~attrs]
+     (doseq [[k# v#] (:style attrs#)] (push-style-var k# v#))
+     (doseq [[k# v#] (:color attrs#)] (push-style-color k# v#))
+     (when (:id attrs#) (push-id (:id attrs#)))
      ~@body
-     (when (:id ~attrs) (pop-id))
-     (pop-style-color (count (:color ~attrs)))
-     (pop-style-var (count (:style ~attrs)))))
+     (when (:id attrs#) (pop-id))
+     (pop-style-color (count (:color attrs#)))
+     (pop-style-var (count (:style attrs#)))))
