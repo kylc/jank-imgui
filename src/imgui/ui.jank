@@ -71,7 +71,7 @@
 (defn begin
   "Push a new window to the stack."
   [{:keys [name pos size collapsed? min-size max-size bg-alpha window-flags]
-    :or   [name ""]}]
+    :or   {name ""}}]
   (when (some? pos) (cpp/ImGui.SetNextWindowPos (vec2 pos) cpp/ImGuiCond_Always))
   (when (some? size) (cpp/ImGui.SetNextWindowSize (vec2 size) cpp/ImGuiCond_Always))
   (when (some? collapsed?) (cpp/ImGui.SetNextWindowCollapsed collapsed? cpp/ImGuiCond_Always))
