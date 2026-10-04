@@ -1,4 +1,4 @@
-(defproject io.github.kylc/jank-imgui "0.1.0"
+(defproject io.github.kylc/jank-imgui "0.1.1-SNAPSHOT"
   :description "Create Dear ImGui GUIs in jank"
   :url "https://github.com/kylc/jank-imgui"
   :license {:name "MPL 2.0"
