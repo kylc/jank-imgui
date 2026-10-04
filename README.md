@@ -10,13 +10,15 @@ Create [Dear ImGui](https://github.com/ocornut/imgui) GUIs in jank.
 
 - cmake
 - a C++ compiler
+- GLFW3
+- libGL
 
 ## Installation
 
 Add the following dependency to your Leiningen project file:
 
 ``` clojure
-[io.github.kylc/jank-imgui "0.1.0"]
+[io.github.kylc/jank-imgui "0.1.1"]
 ```
 
 ## Usage
