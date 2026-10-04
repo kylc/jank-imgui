@@ -36,7 +36,7 @@
   (cpp/ImGui.SetCursorPosX (float x)))
 
 (defn set-cursor-pos-y [y]
-  (cpp/ImGui.SetCursorPosX (float y)))
+  (cpp/ImGui.SetCursorPosY (float y)))
 
 (defn calc-text-size [s]
   (vec2-> (cpp/ImGui.CalcTextSize s)))
