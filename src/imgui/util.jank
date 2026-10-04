@@ -1,6 +1,10 @@
 (ns imgui.util)
 
-(defn parse-flags [defs flags]
-  (->> flags
-       (map #(get defs %))
-       (reduce +)))
+(defn parse-flags [flag-map flags]
+  (->>
+   (for [flag flags]
+     (if-let [v (get flag-map flag)]
+       v
+       (throw (ex-info "invalid flag" {:valid-flags (keys flag-map)
+                                       :flag        flag}))))
+   (reduce + 0)))
