@@ -43,7 +43,7 @@
 
 ;; - Windows ------------------------------------------------------------
 
-(def window-flag-map
+(def ^:private window-flag-map
   {:none                        cpp/ImGuiWindowFlags_None
    :no-title-bar                cpp/ImGuiWindowFlags_NoTitleBar
    :no-resize                   cpp/ImGuiWindowFlags_NoResize
@@ -101,7 +101,7 @@
       (end)
       open?#)))
 
-(def child-flag-map
+(def ^:private child-flag-map
   {:borders                   cpp/ImGuiChildFlags_Borders
    :always-use-window-padding cpp/ImGuiChildFlags_AlwaysUseWindowPadding
    :resize-x                  cpp/ImGuiChildFlags_ResizeX
@@ -250,7 +250,7 @@ namespace imgui::ui {
 
 ;; - Scoped IDs, sytles, colors -----------------------------------------
 
-(def style-vars-map
+(def ^:private style-vars-map
   {:alpha                           [cpp/ImGuiStyleVar_Alpha :float]
    :disabled-alpha                  [cpp/ImGuiStyleVar_DisabledAlpha :float]
    :window-padding                  [cpp/ImGuiStyleVar_WindowPadding :vec2]
@@ -306,7 +306,7 @@ namespace imgui::ui {
   ([] (pop-style-var 1))
   ([n] (cpp/ImGui.PopStyleVar n)))
 
-(def style-colors-map
+(def ^:private style-colors-map
   {:text                         cpp/ImGuiCol_Text
    :text-disabled                cpp/ImGuiCol_TextDisabled
    :window-bg                    cpp/ImGuiCol_WindowBg

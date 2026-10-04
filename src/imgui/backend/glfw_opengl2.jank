@@ -3,7 +3,7 @@
             "imgui_impl_glfw.h"
             "imgui_impl_opengl2.h"))
 
-(defn create-window
+(defn- create-window
   [width height name]
   (->> (cpp/glfwCreateWindow width height name cpp/nullptr cpp/nullptr)
        (cpp/box)))
