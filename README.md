@@ -21,6 +21,10 @@ Add the following dependency to your Leiningen project file:
 [io.github.kylc/jank-imgui "0.1.1"]
 ```
 
+## API docs
+
+See [API.md](./API.md).
+
 ## Usage
 
 See the [examples](./examples/).

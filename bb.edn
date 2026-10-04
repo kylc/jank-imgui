@@ -1,0 +1,6 @@
+{:tasks
+ {quickdoc {:doc "Generate API documentation"
+            :extra-deps {io.github.borkdude/quickdoc {:git/tag "v0.2.6" :git/sha "ce86780"}}
+            :task (exec 'quickdoc.api/quickdoc)
+            :exec-args {:source-paths ["src/imgui/ui.jank"
+                                       "src/imgui/backend/glfw_opengl2.jank"]}}}}

@@ -90,8 +90,8 @@
   "Wrap an expression inside a new window.
 
   If the window is closed then the body will not be evaluated. Prefer
-  this over manual calls to [[begin]] and [[end]]. See [[begin]] for
-  allowed options.
+  this over manual calls to `begin` and `end`. See `begin` for allowed
+  options.
 
   Returns true/false to indicate the window is open/closed."
   ([attrs & body]
@@ -157,8 +157,11 @@
     (cpp/ImGui.Checkbox label (cpp/& v))
     v))
 
-(defn radio-button [{:keys [label active?]}]
-  (cpp/ImGui.RadioButton label active?))
+(defn radio-button [{:keys [label active?]
+                     :or   {active? false}}]
+  (let [v (cpp/int (int active?))]
+    (cpp/ImGui.RadioButton label (cpp/& v) (int active?))
+    (> v 0)))
 
 (defn progress-bar [fraction]
   (cpp/ImGui.ProgressBar fraction))
@@ -383,9 +386,9 @@ namespace imgui::ui {
   (cpp/ImGui.PopID))
 
 (defmacro with-scope
-  "Supported keys are are :id (see [[push-id]]), :style (see
-  [[push-style-var]] for options), :color (see [[push-style-color]]
-  for options), etc."
+  "Supported keys are are :id (see `push-id`), :style (see
+  `push-style-var` for options), :color (see `push-style-color` for
+  options), etc."
   [attrs & body]
   `(let [attrs# ~attrs]
      (doseq [[k# v#] (:style attrs#)] (push-style-var k# v#))
