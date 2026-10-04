@@ -96,7 +96,8 @@
   Returns true/false to indicate the window is open/closed."
   ([attrs & body]
    `(let [open?# (begin ~attrs)]
-      ~@body
+      (when open?#
+        ~@body)
       (end)
       open?#)))
 
@@ -128,9 +129,11 @@
 (defmacro with-child
   ([attrs & body]
    `(do
-      (begin-child ~attrs)
-      ~@body
-      (end-child))))
+      (let [open?# (begin-child ~attrs)]
+        (when open?#
+          ~@body)
+        (end-child)
+        open?#))))
 
 ;; - Widgets: text -------------------------------------------------------
 
