@@ -62,7 +62,7 @@
       ;; More widgets
       (ui/separator "More widgets")
       (ui/checkbox {:label "Hello" :checked? true})
-      (ui/radio-button {:label "Radio" :checked? false})
+      (ui/radio-button {:label "Radio" :active? true})
       (ui/bullet) (ui/same-line) (ui/text "Bullet")
       (ui/text-link "jank-lang.org" "https://jank-lang.org")
 

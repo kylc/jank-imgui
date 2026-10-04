@@ -153,14 +153,12 @@
   (cpp/ImGui.SmallButton label))
 
 (defn checkbox [{:keys [label checked?]}]
-  (let [v-out (cpp/bool checked?)]
-    (cpp/ImGui.Checkbox label (cpp/& v-out))
-    v-out))
+  (let [v (cpp/bool checked?)]
+    (cpp/ImGui.Checkbox label (cpp/& v))
+    v))
 
-(defn radio-button [{:keys [label checked?]}]
-  (let [v-out (cpp/bool checked?)]
-    (cpp/ImGui.RadioButton label (cpp/& v-out))
-    v-out))
+(defn radio-button [{:keys [label active?]}]
+  (cpp/ImGui.RadioButton label active?))
 
 (defn progress-bar [fraction]
   (cpp/ImGui.ProgressBar fraction))
