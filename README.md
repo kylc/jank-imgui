@@ -1,20 +1,38 @@
+# jank-imgui
 
-# jank-imgui demo
+[![Clojars Project](https://img.shields.io/clojars/v/io.github.kylc/jank-imgui.svg)](https://clojars.org/io.github.kylc/jank-imgui)
 
-<img align="right" width="412" height="314" alt="image" src="https://github.com/user-attachments/assets/134d31c4-f8d8-4143-a5b6-4f28d6fd1922" />
+Create [Dear ImGui](https://github.com/ocornut/imgui) GUIs in jank.
 
-Demonstrates calling the C++ [imgui](https://github.com/ocornut/imgui) library from jank to render a simple interactive GUI.
+![demo](./demo.png)
 
-1. Compile imgui as a shared library:
+## Requirements
 
-    ```
-    make libimgui.so
-    ```
+- cmake
+- a C++ compiler
 
-2. Run the jank demo (include/search paths may differ):
+## Installation
 
-    ```
-    jank -L/usr/lib/x86_64-linux-gnu -lglfw -lGL \
-        -L. -limgui -Iimgui -Iimgui/backends \
-        --module-path=. run-main imgui-demo
-    ```
+Add the following dependency to your Leiningen project file:
+
+``` clojure
+[io.github.kylc/jank-imgui "0.1.0"]
+```
+
+## Usage
+
+See the [examples](./examples/).
+
+``` clojure
+(ns e01-hello
+  (:require
+   [imgui.ui :as ui]
+   [imgui.backend.glfw-opengl2 :as backend]))
+
+(defn root []
+  (ui/with-window {:name "e01-hello"}
+    (ui/text "Hello world")))
+
+(defn -main [& args]
+  (backend/run {:name "eo1-hello"} #'root))
+```

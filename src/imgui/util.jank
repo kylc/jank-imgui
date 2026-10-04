@@ -1,0 +1,6 @@
+(ns imgui.util)
+
+(defn parse-flags [defs flags]
+  (->> flags
+       (map #(get defs %))
+       (reduce +)))

@@ -1,0 +1,396 @@
+(ns imgui.ui
+  (:require [imgui.util :refer [parse-flags]])
+  (:include "imgui.h"
+            "misc/cpp/imgui_stdlib.h"))
+
+(defmacro vec2
+  "Coerce to ImVec2."
+  ([xy] `(let [[x# y#] ~xy] (vec2 x# y#)))
+  ([x y] `(cpp/ImVec2. (float ~x) (float ~y))))
+
+(defmacro vec2-> [v]
+  `[(cpp/.-x ~v) (cpp/.-y ~v)])
+
+(defmacro vec4
+  "Coerce to ImVec4."
+  ([xyzw] `(let [[x# y# z# w#] ~xyzw] (vec4 x# y# z# w#)))
+  ([x y z w] `(cpp/ImVec4. (float ~x) (float ~y) (float ~z) (float ~w))))
+
+(defmacro vec4-> [v]
+  `[(cpp/.-x ~v) (cpp/.-y ~v) (cpp/.-z ~v) (cpp/.-w ~v)])
+
+(defn display-size []
+  (let [io (cpp/ImGui.GetIO)]
+    (vec2-> (.-DisplaySize io))))
+
+(defn cursor-screen-pos []
+  (vec2-> (cpp/ImGui.GetCursorScreenPos)))
+
+(defn content-region-avail []
+  (vec2-> (cpp/ImGui.GetContentRegionAvail)))
+
+(defn set-cursor-pos [v]
+  (cpp/ImGui.SetCursorPos (vec2 v)))
+
+(defn set-cursor-pos-x [x]
+  (cpp/ImGui.SetCursorPosX (float x)))
+
+(defn set-cursor-pos-y [y]
+  (cpp/ImGui.SetCursorPosX (float y)))
+
+(defn calc-text-size [s]
+  (vec2-> (cpp/ImGui.CalcTextSize s)))
+
+;; - Windows ------------------------------------------------------------
+
+(def window-flag-map
+  {:none                        cpp/ImGuiWindowFlags_None
+   :no-title-bar                cpp/ImGuiWindowFlags_NoTitleBar
+   :no-resize                   cpp/ImGuiWindowFlags_NoResize
+   :no-move                     cpp/ImGuiWindowFlags_NoMove
+   :no-scrollbar                cpp/ImGuiWindowFlags_NoScrollbar
+   :no-scroll-with-mouse        cpp/ImGuiWindowFlags_NoScrollWithMouse
+   :no-collapse                 cpp/ImGuiWindowFlags_NoCollapse
+   :always-auto-resize          cpp/ImGuiWindowFlags_AlwaysAutoResize
+   :no-background               cpp/ImGuiWindowFlags_NoBackground
+   :no-saved-settings           cpp/ImGuiWindowFlags_NoSavedSettings
+   :no-mouse-inputs             cpp/ImGuiWindowFlags_NoMouseInputs
+   :menu-bar                    cpp/ImGuiWindowFlags_MenuBar
+   :horizontal-scrollbar        cpp/ImGuiWindowFlags_HorizontalScrollbar
+   :no-focus-on-appearing       cpp/ImGuiWindowFlags_NoFocusOnAppearing
+   :no-bring-to-front-on-focus  cpp/ImGuiWindowFlags_NoBringToFrontOnFocus
+   :always-vertical-scrollbar   cpp/ImGuiWindowFlags_AlwaysVerticalScrollbar
+   :always-horizontal-scrollbar cpp/ImGuiWindowFlags_AlwaysHorizontalScrollbar
+   :no-nav-inputs               cpp/ImGuiWindowFlags_NoNavInputs
+   :no-nav-focus                cpp/ImGuiWindowFlags_NoNavFocus
+   :unsaved-document            cpp/ImGuiWindowFlags_UnsavedDocument
+   :no-nav                      cpp/ImGuiWindowFlags_NoNav
+   :no-decoration               cpp/ImGuiWindowFlags_NoDecoration
+   :no-inputs                   cpp/ImGuiWindowFlags_NoInputs})
+
+(defn begin
+  "Push a new window to the stack."
+  [{:keys [name pos size collapsed? min-size max-size bg-alpha window-flags]
+    :or   [name ""]}]
+  (when (some? pos) (cpp/ImGui.SetNextWindowPos (vec2 pos) cpp/ImGuiCond_Always))
+  (when (some? size) (cpp/ImGui.SetNextWindowSize (vec2 size) cpp/ImGuiCond_Always))
+  (when (some? collapsed?) (cpp/ImGui.SetNextWindowCollapsed collapsed? cpp/ImGuiCond_Always))
+  (when (some? (or min-size max-size))
+    (cpp/ImGui.SetNextWindowSizeConstraints (vec2 (or min-size [0.0 0.0]))
+                                            (vec2 (or max-size [0.0 0.0]))))
+  (when (some? bg-alpha) (cpp/ImGui.SetNextWindowBgAlpha bg-alpha))
+  (cpp/ImGui.Begin name cpp/nullptr (parse-flags window-flag-map window-flags)))
+
+(defn end
+  "Pop the current window from the stack."
+  []
+  (cpp/ImGui.End))
+
+(defmacro with-window
+  "Wrap an expression inside a new window.
+
+  If the window is closed then the body will not be evaluated. Prefer
+  this over manual calls to [[begin]] and [[end]]. See [[begin]] for
+  allowed options.
+
+  Returns true/false to indicate the window is open/closed."
+  ([attrs & body]
+   `(let [open?# (begin ~attrs)]
+      ~@body
+      (end)
+      open?#)))
+
+(def child-flag-map
+  {:borders                   cpp/ImGuiChildFlags_Borders
+   :always-use-window-padding cpp/ImGuiChildFlags_AlwaysUseWindowPadding
+   :resize-x                  cpp/ImGuiChildFlags_ResizeX
+   :resize-y                  cpp/ImGuiChildFlags_ResizeY
+   :auto-resize-x             cpp/ImGuiChildFlags_AutoResizeX
+   :auto-resize-y             cpp/ImGuiChildFlags_AutoResizeY
+   :always-auto-resize        cpp/ImGuiChildFlags_AlwaysAutoResize
+   :frame-style               cpp/ImGuiChildFlags_FrameStyle
+   :nav-flattened             cpp/ImGuiChildFlags_NavFlattened})
+
+(defn begin-child
+  [{:keys [name size child-flags window-flags]
+    :or   {name "" size [0.0 0.0]}
+    :as   attrs}]
+  ;; TODO(jank): overload resolution fails without int cast
+  (let [wflags (int (parse-flags window-flag-map window-flags))
+        cflags (int (parse-flags child-flag-map child-flags))]
+    ;; TODO(jank): jank compiler fails without string cast
+    (cpp/ImGui.BeginChild (.c_str (cpp/cast std.string name)) (vec2 size) cflags wflags)))
+
+(defn end-child
+  []
+  (cpp/ImGui.EndChild))
+
+(defmacro with-child
+  ([attrs & body]
+   `(do
+      (begin-child ~attrs)
+      ~@body
+      (end-child))))
+
+;; - Widgets: text -------------------------------------------------------
+
+(defn text [s]
+  (cpp/ImGui.TextUnformatted s))
+
+;; - Widgets: main -------------------------------------------------------
+
+(defn button
+  [{:keys [label size on-click]
+    :or   {label "" size [0.0 0.0]}}]
+  (when (cpp/ImGui.Button label (vec2 size))
+    (when on-click
+      (on-click))))
+
+(defn small-button [{:keys [label]}]
+  (cpp/ImGui.SmallButton label))
+
+(defn checkbox [{:keys [label checked?]}]
+  (let [v-out (cpp/bool checked?)]
+    (cpp/ImGui.Checkbox label (cpp/& v-out))
+    v-out))
+
+(defn radio-button [{:keys [label checked?]}]
+  (let [v-out (cpp/bool checked?)]
+    (cpp/ImGui.RadioButton label (cpp/& v-out))
+    v-out))
+
+(defn progress-bar [fraction]
+  (cpp/ImGui.ProgressBar fraction))
+
+(defn bullet []
+  (cpp/ImGui.Bullet))
+
+(defn text-link
+  ([label] (cpp/ImGui.TextLink label))
+  ([label url] (cpp/ImGui.TextLinkOpenURL label url)))
+
+;; - Widgets: images -----------------------------------------------------
+;; - Widgets: combo box --------------------------------------------------
+
+(defn begin-combo [{:keys [label preview-value]
+                    :or   {preview-value ""}}]
+  (cpp/ImGui.BeginCombo label preview-value))
+
+(defn end-combo []
+  (cpp/ImGui.EndCombo))
+
+(defmacro with-combo [attrs & body]
+  `(when (begin-combo ~attrs)
+     ~@body
+     (end-combo)))
+
+;; - Widgets: drag sliders -----------------------------------------------
+;; - Widgets: regular sliders --------------------------------------------
+;; - Widgets: input with keyboard ----------------------------------------
+
+(cpp/raw "
+namespace imgui::ui {
+  inline jtl::immutable_string input_text(jtl::immutable_string const &label,
+                                          jtl::immutable_string const &s) {
+    std::string v { s };
+    ImGui::InputText(label.c_str(), &v);
+    return { v };
+  }
+
+  inline jtl::immutable_string input_text_multiline(jtl::immutable_string const &label,
+                                                    jtl::immutable_string const &s) {
+    std::string v { s };
+    ImGui::InputTextMultiline(label.c_str(), &v);
+    return { v };
+  }
+}
+")
+
+(defn input-text [label text]
+  ;; TODO(jank): jank struggles with the ImGui.InputText signature,
+  ;; resolving const vs. non-const args, etc. Use a C++ shim for now.
+  (cpp/imgui.ui.input_text label text))
+
+(defn input-text-multiline [label text]
+  ;; TODO(jank): jank struggles with the ImGui.InputText signature,
+  ;; resolving const vs. non-const args, etc. Use a C++ shim for now.
+  (cpp/imgui.ui.input_text_multiline label text))
+
+;; - Widgets: color editor / picker --------------------------------------
+;; - Widgets: trees ------------------------------------------------------
+;; - Widgets: selectables ------------------------------------------------
+
+(defn selectable [label selected?]
+  ;; TODO(jank): jank incorrectly says this function is not viable
+  ;; without the cast to std.string.
+  (cpp/ImGui.Selectable (.c_str (cpp/cast std.string label)) selected?))
+
+;; - Widgets: list boxes -------------------------------------------------
+;; - Widgets: data plotting ----------------------------------------------
+;; - Widgets: menus ------------------------------------------------------
+
+;; - Layout -------------------------------------------------------------
+
+(defn separator
+  ([] (cpp/ImGui.Separator))
+  ([text] (cpp/ImGui.SeparatorText text)))
+
+(defn same-line []
+  (cpp/ImGui.SameLine))
+
+(defn new-line []
+  (cpp/ImGui.NewLine))
+
+(defn dummy [size]
+  (cpp/ImGui.Dummy (vec2 size)))
+
+;; - Scoped IDs, sytles, colors -----------------------------------------
+
+(def style-vars-map
+  {:alpha                           [cpp/ImGuiStyleVar_Alpha :float]
+   :disabled-alpha                  [cpp/ImGuiStyleVar_DisabledAlpha :float]
+   :window-padding                  [cpp/ImGuiStyleVar_WindowPadding :vec2]
+   :window-rounding                 [cpp/ImGuiStyleVar_WindowRounding :float]
+   :window-border-size              [cpp/ImGuiStyleVar_WindowBorderSize :float]
+   :window-min-size                 [cpp/ImGuiStyleVar_WindowMinSize :vec2]
+   :window-title-align              [cpp/ImGuiStyleVar_WindowTitleAlign :vec2]
+   :child-rounding                  [cpp/ImGuiStyleVar_ChildRounding :float]
+   :child-border-size               [cpp/ImGuiStyleVar_ChildBorderSize :float]
+   :popup-rounding                  [cpp/ImGuiStyleVar_PopupRounding :float]
+   :popup-border-size               [cpp/ImGuiStyleVar_PopupBorderSize :float]
+   :frame-padding                   [cpp/ImGuiStyleVar_FramePadding :vec2]
+   :frame-rounding                  [cpp/ImGuiStyleVar_FrameRounding :float]
+   :frame-border-size               [cpp/ImGuiStyleVar_FrameBorderSize :float]
+   :item-spacing                    [cpp/ImGuiStyleVar_ItemSpacing :vec2]
+   :item-inner-spacing              [cpp/ImGuiStyleVar_ItemInnerSpacing :vec2]
+   :indent-spacing                  [cpp/ImGuiStyleVar_IndentSpacing :float]
+   :cell-padding                    [cpp/ImGuiStyleVar_CellPadding :vec2]
+   :scrollbar-size                  [cpp/ImGuiStyleVar_ScrollbarSize :float]
+   :scrollbar-rounding              [cpp/ImGuiStyleVar_ScrollbarRounding :float]
+   :scrollbar-padding               [cpp/ImGuiStyleVar_ScrollbarPadding :float]
+   :grab-min-size                   [cpp/ImGuiStyleVar_GrabMinSize :float]
+   :grab-rounding                   [cpp/ImGuiStyleVar_GrabRounding :float]
+   :image-rounding                  [cpp/ImGuiStyleVar_ImageRounding :float]
+   :image-border-size               [cpp/ImGuiStyleVar_ImageBorderSize :float]
+   :tab-rounding                    [cpp/ImGuiStyleVar_TabRounding :float]
+   :tab-border-size                 [cpp/ImGuiStyleVar_TabBorderSize :float]
+   :tab-min-width-base              [cpp/ImGuiStyleVar_TabMinWidthBase :float]
+   :tab-min-width-shrink            [cpp/ImGuiStyleVar_TabMinWidthShrink :float]
+   :tab-bar-border-size             [cpp/ImGuiStyleVar_TabBarBorderSize :float]
+   :tab-bar-overline-size           [cpp/ImGuiStyleVar_TabBarOverlineSize :float]
+   :table-angled-headers-angle      [cpp/ImGuiStyleVar_TableAngledHeadersAngle :float]
+   :table-angled-headers-text-align [cpp/ImGuiStyleVar_TableAngledHeadersTextAlign :vec2]
+   :tree-lines-size                 [cpp/ImGuiStyleVar_TreeLinesSize :float]
+   :tree-lines-rounding             [cpp/ImGuiStyleVar_TreeLinesRounding :float]
+   :drag-drop-target-rounding       [cpp/ImGuiStyleVar_DragDropTargetRounding :float]
+   :button-text-align               [cpp/ImGuiStyleVar_ButtonTextAlign :vec2]
+   :selectable-text-align           [cpp/ImGuiStyleVar_SelectableTextAlign :vec2]
+   :separator-size                  [cpp/ImGuiStyleVar_SeparatorSize :float]
+   :separator-text-border-size      [cpp/ImGuiStyleVar_SeparatorTextBorderSize :float]
+   :separator-text-align            [cpp/ImGuiStyleVar_SeparatorTextAlign :vec2]
+   :separator-text-padding          [cpp/ImGuiStyleVar_SeparatorTextPadding :vec2]})
+
+(defn push-style-var [var value]
+  (if-let [[key type] (get style-vars-map var)]
+    (case type
+      ;; TODO(jank): should not need cpp/int here
+      :float (cpp/ImGui.PushStyleVar (cpp/int key) (float value))
+      :vec2  (cpp/ImGui.PushStyleVar (cpp/int key) (vec2 value)))
+    (throw (ex-info "invalid imgui style var" {:var var}))))
+
+(defn pop-style-var
+  ([] (pop-style-var 1))
+  ([n] (cpp/ImGui.PopStyleVar n)))
+
+(def style-colors-map
+  {:text                         cpp/ImGuiCol_Text
+   :text-disabled                cpp/ImGuiCol_TextDisabled
+   :window-bg                    cpp/ImGuiCol_WindowBg
+   :child-bg                     cpp/ImGuiCol_ChildBg
+   :popup-bg                     cpp/ImGuiCol_PopupBg
+   :border                       cpp/ImGuiCol_Border
+   :border-shadow                cpp/ImGuiCol_BorderShadow
+   :frame-bg                     cpp/ImGuiCol_FrameBg
+   :frame-bg-hovered             cpp/ImGuiCol_FrameBgHovered
+   :frame-bg-active              cpp/ImGuiCol_FrameBgActive
+   :title-bg                     cpp/ImGuiCol_TitleBg
+   :title-bg-active              cpp/ImGuiCol_TitleBgActive
+   :title-bg-collapsed           cpp/ImGuiCol_TitleBgCollapsed
+   :menu-bar-bg                  cpp/ImGuiCol_MenuBarBg
+   :scrollbar-bg                 cpp/ImGuiCol_ScrollbarBg
+   :scrollbar-grab               cpp/ImGuiCol_ScrollbarGrab
+   :scrollbar-grab-hovered       cpp/ImGuiCol_ScrollbarGrabHovered
+   :scrollbar-grab-active        cpp/ImGuiCol_ScrollbarGrabActive
+   :check-mark                   cpp/ImGuiCol_CheckMark
+   :checkbox-selected-bg         cpp/ImGuiCol_CheckboxSelectedBg
+   :slider-grab                  cpp/ImGuiCol_SliderGrab
+   :slider-grab-active           cpp/ImGuiCol_SliderGrabActive
+   :button                       cpp/ImGuiCol_Button
+   :button-hovered               cpp/ImGuiCol_ButtonHovered
+   :button-active                cpp/ImGuiCol_ButtonActive
+   :header                       cpp/ImGuiCol_Header
+   :header-hovered               cpp/ImGuiCol_HeaderHovered
+   :header-active                cpp/ImGuiCol_HeaderActive
+   :separator                    cpp/ImGuiCol_Separator
+   :separator-hovered            cpp/ImGuiCol_SeparatorHovered
+   :separator-active             cpp/ImGuiCol_SeparatorActive
+   :resize-grip                  cpp/ImGuiCol_ResizeGrip
+   :resize-grip-hovered          cpp/ImGuiCol_ResizeGripHovered
+   :resize-grip-active           cpp/ImGuiCol_ResizeGripActive
+   :input-text-cursor            cpp/ImGuiCol_InputTextCursor
+   :tab-hovered                  cpp/ImGuiCol_TabHovered
+   :tab                          cpp/ImGuiCol_Tab
+   :tab-selected                 cpp/ImGuiCol_TabSelected
+   :tab-selected-overline        cpp/ImGuiCol_TabSelectedOverline
+   :tab-dimmed                   cpp/ImGuiCol_TabDimmed
+   :tab-dimmed-selected          cpp/ImGuiCol_TabDimmedSelected
+   :tab-dimmed-selected-overline cpp/ImGuiCol_TabDimmedSelectedOverline
+   :plot-lines                   cpp/ImGuiCol_PlotLines
+   :plot-lines-hovered           cpp/ImGuiCol_PlotLinesHovered
+   :plot-histogram               cpp/ImGuiCol_PlotHistogram
+   :plot-histogram-hovered       cpp/ImGuiCol_PlotHistogramHovered
+   :table-header-bg              cpp/ImGuiCol_TableHeaderBg
+   :table-border-strong          cpp/ImGuiCol_TableBorderStrong
+   :table-border-light           cpp/ImGuiCol_TableBorderLight
+   :table-row-bg                 cpp/ImGuiCol_TableRowBg
+   :table-row-bg-alt             cpp/ImGuiCol_TableRowBgAlt
+   :text-link                    cpp/ImGuiCol_TextLink
+   :text-selected-bg             cpp/ImGuiCol_TextSelectedBg
+   :tree-lines                   cpp/ImGuiCol_TreeLines
+   :drag-drop-target             cpp/ImGuiCol_DragDropTarget
+   :drag-drop-target-bg          cpp/ImGuiCol_DragDropTargetBg
+   :unsaved-marker               cpp/ImGuiCol_UnsavedMarker
+   :nav-cursor                   cpp/ImGuiCol_NavCursor
+   :nav-windowing-highlight      cpp/ImGuiCol_NavWindowingHighlight
+   :nav-windowing-dim-bg         cpp/ImGuiCol_NavWindowingDimBg
+   :modal-window-dim-bg          cpp/ImGuiCol_ModalWindowDimBg})
+
+(defn push-style-color [var value]
+  (if-let [key (get style-colors-map var)]
+    ;; TODO(jank): should not need cpp/int here
+    (cpp/ImGui.PushStyleColor (cpp/int key) (vec4 value))
+    (throw (ex-info "invalid imgui style color" {:color var}))))
+
+(defn pop-style-color
+  ([] (cpp/ImGui.PopStyleColor))
+  ([n] (cpp/ImGui.PopStyleColor n)))
+
+(defn push-id [id]
+  (cpp/ImGui.PushID (.c_str (cpp/cast std.string id))))
+
+(defn pop-id []
+  (cpp/ImGui.PopID))
+
+(defmacro with-scope
+  "Supported keys are are :id (see [[push-id]]), :style (see
+  [[push-style-var]] for options), :color (see [[push-style-color]]
+  for options), etc."
+  [attrs & body]
+  `(do
+     (doseq [[k# v#] (:style ~attrs)] (push-style-var k# v#))
+     (doseq [[k# v#] (:color ~attrs)] (push-style-color k# v#))
+     (when (:id ~attrs) (push-id (:id ~attrs)))
+     ~@body
+     (when (:id ~attrs) (pop-id))
+     (pop-style-color (count (:color ~attrs)))
+     (pop-style-var (count (:style ~attrs)))))

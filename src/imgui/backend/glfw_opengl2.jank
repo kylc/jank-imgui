@@ -1,0 +1,51 @@
+(ns imgui.backend.glfw-opengl2
+  (:include "GLFW/glfw3.h"
+            "imgui_impl_glfw.h"
+            "imgui_impl_opengl2.h"))
+
+(defn create-window
+  [width height name]
+  (->> (cpp/glfwCreateWindow width height name cpp/nullptr cpp/nullptr)
+       (cpp/box)))
+
+(defn run [{:keys [name width height frame-rate]
+            :or   {name "" width 200 height 200}}
+           app]
+  (cpp/glfwInit)
+  (let [window (cpp/unbox (:* GLFWwindow) (create-window width height name))]
+    ;; setup GLFW
+    (cpp/glfwMakeContextCurrent window)
+    (cpp/glfwSwapInterval 1)
+    ;; initialize imgui
+    (cpp/ImGui.CreateContext)
+    (cpp/ImGui.StyleColorsDark)
+    (cpp/ImGui_ImplGlfw_InitForOpenGL window true)
+    (cpp/ImGui_ImplOpenGL2_Init)
+    ;; frame loop
+    (while (cpp/! (cpp/glfwWindowShouldClose window))
+      (let [start-time (cpp/std.chrono.system_clock.now)
+            width      (cpp/int 0)
+            height     (cpp/int 0)]
+        ;; poll events
+        (cpp/glfwPollEvents)
+        ;; setup frame in imgui backend
+        (cpp/ImGui_ImplOpenGL2_NewFrame)
+        (cpp/ImGui_ImplGlfw_NewFrame)
+        (cpp/ImGui.NewFrame)
+        ;; call user code
+        (app)
+        ;; render the frame
+        (cpp/ImGui.Render)
+        (cpp/glfwGetFramebufferSize window (cpp/& width) (cpp/& height))
+        (cpp/glViewport 0 0 width height)
+        (cpp/glClearColor 0.0 0.0 0.0 1.0)
+        (cpp/glClear cpp/GL_COLOR_BUFFER_BIT)
+        (cpp/ImGui_ImplOpenGL2_RenderDrawData (cpp/ImGui.GetDrawData))
+        (cpp/glfwMakeContextCurrent window)
+        (cpp/glfwSwapBuffers window)
+        ;; wait to render the next frame
+        (when frame-rate
+          (let [frame-time-us (int (/ 1e6 frame-rate))
+                deadline      (cpp/+ start-time (cpp/std.chrono.microseconds frame-time-us))]
+            (cpp/std.this_thread.sleep_until deadline)))))
+    (cpp/glfwTerminate)))

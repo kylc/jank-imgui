@@ -1,0 +1,97 @@
+(ns e02-complex
+  (:require
+   [imgui.ui :as ui]
+   [imgui.backend.glfw-opengl2 :as backend])
+  (:include "imgui.h"))
+
+(def color-background [0.055 0.075 0.11 1.0])
+(def color-panel [0.12 0.16 0.22 1.0])
+(def color-blue [0.34 0.62 0.92 1.0])
+(def color-mint [0.32 0.78 0.67 1.0])
+(def color-text [0.92 0.94 0.97 1.0])
+
+(def state
+  (atom {:progress 0.9}))
+
+(defn fancy-button [attrs]
+  (ui/with-scope {:color {:button         color-blue
+                          :button-hovered color-mint
+                          :button-active  color-blue}
+                  :style {:frame-rounding 6
+                          :frame-padding  [12 6]}}
+    (ui/button attrs)))
+
+(defn header []
+  (ui/with-scope {:color {:child-bg color-panel}
+                  :style {:window-padding [20 20]}}
+    (ui/with-child {:name        "Panel"
+                    :size        [-1.0 100.0]
+                    :child-flags #{:always-use-window-padding}}
+      ;; If a function isn't wrapped, you can use the ImGui C++ API
+      ;; directly (be sure to include imgui.h).
+      (cpp/ImGui.PushFont cpp/nullptr 30.0)
+      (ui/text "jank-imgui")
+      (cpp/ImGui.PopFont)
+      (ui/text "github.com/kylc/jank-imgui"))))
+
+(defn content []
+  (ui/with-scope {:style {:window-padding [20 5]}}
+    (ui/with-child {:name        "Content"
+                    :child-flags #{:always-use-window-padding}}
+      (ui/separator "Controls")
+      (ui/text "Here's a button:")
+      (fancy-button {:label "Button"})
+
+      (ui/separator "Data")
+      (ui/text "jank's progress toward world domination:")
+      (ui/progress-bar (:progress @state))
+
+      ;; Compute the available width and the button width to lay out
+      ;; two buttons on opposing sides of the container.
+      (let [[size _]  (ui/calc-text-size "+")
+            [avail _] (ui/content-region-avail)]
+        (fancy-button {:label    "-"
+                       :on-click (fn dec-clicked []
+                                   (swap! state update :progress #(- % 0.01)))})
+        (ui/same-line)
+        (ui/set-cursor-pos-x (- avail size))
+        (fancy-button {:label    "+"
+                       :on-click (fn inc-clicked []
+                                   (swap! state update :progress #(+ % 0.01)))}))
+
+      ;; More widgets
+      (ui/separator "More widgets")
+      (ui/checkbox {:label "Hello" :checked? true})
+      (ui/radio-button {:label "Radio" :checked? false})
+      (ui/bullet) (ui/same-line) (ui/text "Bullet")
+      (ui/text-link "jank-lang.org" "https://jank-lang.org")
+
+      (ui/with-combo {:label "Combo input"}
+        (ui/selectable "Option A" false)
+        (ui/selectable "Option B" false))
+
+      (ui/input-text "##input" "type something here...")
+      (ui/input-text-multiline "##multiline" "type something here...")
+
+      (fancy-button {:label    "Exit"
+                     :on-click #(cpp/std.exit 0)}))))
+
+(defn root []
+  (ui/with-scope {:style {:window-padding [0 0]}
+                  :color {:window-bg color-background
+                          :text      color-text}}
+    (ui/with-window {:name         "e02-complex"
+                     :pos          [0 0]
+                     :size         (ui/display-size)
+                     :collapsed?   false
+                     :window-flags #{:no-decoration}}
+      (header)
+      (content))))
+
+(defn -main [& args]
+  (backend/run
+    {:name       "e02-complex"
+     :width      400
+     :height     600
+     :frame-rate 60}
+    #'root))

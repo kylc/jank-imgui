@@ -1,0 +1,11 @@
+(ns e01-hello
+  (:require
+   [imgui.ui :as ui]
+   [imgui.backend.glfw-opengl2 :as backend]))
+
+(defn root []
+  (ui/with-window {:name "e01-hello"}
+    (ui/text "Hello world")))
+
+(defn -main [& args]
+  (backend/run {:name "eo1-hello"} #'root))
