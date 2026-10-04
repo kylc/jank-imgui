@@ -1,4 +1,6 @@
 (defproject io.github.kylc/jank-imgui "0.1-SNAPSHOT"
+  :description "Create Dear ImGui GUIs in jank"
+  :url "https://github.com/kylc/jank-imgui"
   :license {:name "MPL 2.0"
             :url  "https://www.mozilla.org/en-US/MPL/2.0/"}
   :dependencies [[org.jank-lang.commons/imgui-glfw-sys "2026.09-9"]
